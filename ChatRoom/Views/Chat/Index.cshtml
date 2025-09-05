@@ -1,0 +1,281 @@
+@{
+    ViewData["Title"] = "ChatRoom";
+    var username = ViewBag.Username as string;
+}
+
+<div class="container-fluid p-0" style="height: 100vh;">
+    <div class="row g-0 h-100">
+        <!-- Sidebar with users list -->
+        <div class="col-md-3 bg-light border-end">
+            <div class="p-3 border-bottom bg-primary text-white">
+                <h5 class="mb-0">
+                    👤 @username
+                </h5>
+                <small>Online Users</small>
+            </div>
+            <div id="users-list" class="p-3">
+                <!-- Users will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Chat area -->
+        <div class="col-md-9 d-flex flex-column">
+            <!-- Chat header -->
+            <div id="chat-header" class="p-3 border-bottom bg-white" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0" id="chat-with-user">Select a user to start chatting</h6>
+                        <small class="text-muted">Online</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-success btn-sm me-2" id="audio-call-btn" title="Audio Call">
+                            📞 Audio
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" id="video-call-btn" title="Video Call">
+                            📹 Video
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Messages area -->
+            <div id="messages-container" class="flex-grow-1 p-3 overflow-auto">
+                <div class="text-center text-muted mt-5">
+                    💬
+                    <h5>Welcome to ChatRoom!</h5>
+                    <p>Select a user from the left to start chatting</p>
+                </div>
+            </div>
+            
+            <!-- Message input -->
+            <div id="message-input-area" class="p-3 border-top bg-light" style="display: none;">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="message-input" placeholder="Type your message..." maxlength="500">
+                    <button class="btn btn-primary" type="button" id="send-btn">
+                        ➤ Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call Modal -->
+<div class="modal fade" id="callModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="callModalTitle">Incoming Call</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="callContent">
+                    <!-- Call content will be populated here -->
+                </div>
+                <div id="callControls" class="mt-3" style="display: none;">
+                    <video id="localVideo" width="200" height="150" autoplay muted class="me-2"></video>
+                    <video id="remoteVideo" width="200" height="150" autoplay></video>
+                </div>
+            </div>
+            <div class="modal-footer" id="callModalFooter">
+                <button type="button" class="btn btn-success" id="acceptCallBtn">
+                    <i class="fas fa-phone"></i> Accept
+                </button>
+                <button type="button" class="btn btn-danger" id="rejectCallBtn">
+                    <i class="fas fa-phone-slash"></i> Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simple SignalR-like implementation for demo purposes
+        const username = '@username';
+        let currentUser = { id: Math.random().toString(36), username: username };
+        let currentChatUser = null;
+        let users = [];
+        let messages = [];
+        
+        // Simulate user management
+        function initializeConnection() {
+            // Add current user
+            users.push(currentUser);
+            
+            // Add some demo users for testing
+            if (username === 'TestUser1') {
+                users.push({ id: '2', username: 'TestUser2' });
+                users.push({ id: '3', username: 'TestUser3' });
+            }
+            
+            updateUsersList();
+        }
+        
+        // Update users list
+        function updateUsersList() {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = '';
+            
+            users.forEach(user => {
+                if (user.username !== username) {
+                    addUserToList(user);
+                }
+            });
+        }
+        
+        // Add user to list
+        function addUserToList(user) {
+            const usersList = document.getElementById('users-list');
+            const userDiv = document.createElement('div');
+            userDiv.className = 'user-item p-2 border-bottom';
+            userDiv.style.cursor = 'pointer';
+            userDiv.setAttribute('data-user-id', user.id);
+            userDiv.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="bg-success rounded-circle me-2" style="width: 10px; height: 10px;"></div>
+                    <div>
+                        <div class="fw-bold">${user.username}</div>
+                        <small class="text-muted">Online</small>
+                    </div>
+                </div>
+            `;
+            
+            userDiv.addEventListener('click', () => selectUser(user));
+            usersList.appendChild(userDiv);
+        }
+        
+        // Select user for chat
+        function selectUser(user) {
+            currentChatUser = user;
+            
+            // Update UI
+            document.getElementById('chat-with-user').textContent = user.username;
+            document.getElementById('chat-header').style.display = 'block';
+            document.getElementById('message-input-area').style.display = 'block';
+            
+            // Clear default message
+            document.getElementById('messages-container').innerHTML = '';
+            
+            // Load chat history
+            loadChatHistory(user.id);
+            
+            // Highlight selected user
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('bg-primary', 'text-white');
+            });
+            document.querySelector(`[data-user-id="${user.id}"]`).classList.add('bg-primary', 'text-white');
+        }
+        
+        // Load chat history
+        function loadChatHistory(userId) {
+            const userMessages = messages.filter(m => 
+                (m.fromUserId === currentUser.id && m.toUserId === userId) ||
+                (m.fromUserId === userId && m.toUserId === currentUser.id)
+            );
+            
+            userMessages.forEach(message => {
+                displayMessage(message);
+            });
+        }
+        
+        // Display message
+        function displayMessage(message) {
+            const messagesContainer = document.getElementById('messages-container');
+            const isMyMessage = message.fromUserId === currentUser.id;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `mb-3 d-flex ${isMyMessage ? 'justify-content-end' : 'justify-content-start'}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble ${isMyMessage ? 'bg-primary text-white' : 'bg-light'} p-2 rounded" style="max-width: 70%;">
+                    <div class="fw-bold">${isMyMessage ? 'You' : message.fromUsername}</div>
+                    <div>${message.message}</div>
+                    <small class="text-${isMyMessage ? 'light' : 'muted'}">${new Date(message.timestamp).toLocaleTimeString()}</small>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Send message
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const messageText = messageInput.value.trim();
+            
+            if (!messageText || !currentChatUser) return;
+            
+            const message = {
+                id: Math.random().toString(36),
+                fromUserId: currentUser.id,
+                toUserId: currentChatUser.id,
+                fromUsername: currentUser.username,
+                toUsername: currentChatUser.username,
+                message: messageText,
+                timestamp: new Date().toISOString()
+            };
+            
+            messages.push(message);
+            displayMessage(message);
+            messageInput.value = '';
+            
+            // Simulate receiving a response after 1 second
+            setTimeout(() => {
+                const response = {
+                    id: Math.random().toString(36),
+                    fromUserId: currentChatUser.id,
+                    toUserId: currentUser.id,
+                    fromUsername: currentChatUser.username,
+                    toUsername: currentUser.username,
+                    message: `Hello ${currentUser.username}! This is a demo response.`,
+                    timestamp: new Date().toISOString()
+                };
+                messages.push(response);
+                displayMessage(response);
+            }, 1000);
+        }
+        
+        // Call functions (demo alerts)
+        function startCall(callType) {
+            if (!currentChatUser) return;
+            
+            alert(`Starting ${callType} call with ${currentChatUser.username}. This is a demo - actual WebRTC implementation would go here.`);
+        }
+        
+        // Event listeners
+        document.getElementById('send-btn').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        document.getElementById('audio-call-btn').addEventListener('click', () => startCall('audio'));
+        document.getElementById('video-call-btn').addEventListener('click', () => startCall('video'));
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeConnection);
+    </script>
+    
+    <style>
+        .user-item:hover {
+            background-color: #f8f9fa !important;
+            cursor: pointer;
+        }
+        
+        .message-bubble {
+            word-wrap: break-word;
+        }
+        
+        #messages-container {
+            background-color: #fafafa;
+        }
+        
+        .cursor-pointer {
+            cursor: pointer;
+        }
+    </style>
+}
