@@ -43,6 +43,32 @@ namespace ChatRoom.Controllers
             return Json(new { success = true });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> JoinChat([FromBody] string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return Json(new { success = false, message = "Username cannot be empty" });
+            }
+
+            var isAvailable = await _userService.IsUsernameAvailableAsync(username);
+            if (!isAvailable)
+            {
+                return Json(new { success = false, message = "Username is already taken" });
+            }
+
+            // Add user with a temporary connection ID
+            var connectionId = $"http_conn_{Guid.NewGuid()}";
+            var user = await _userService.AddUserAsync(username, connectionId);
+            
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Failed to join chat" });
+            }
+
+            return Json(new { success = true, user = user });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetUsers()
         {

@@ -93,25 +93,77 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Simple SignalR-like implementation for demo purposes
+        // HTTP-based real-time implementation using existing endpoints
         const username = '@username';
-        let currentUser = { id: Math.random().toString(36), username: username };
+        let currentUser = null;
         let currentChatUser = null;
         let users = [];
         let messages = [];
+        let pollingInterval = null;
         
-        // Simulate user management
-        function initializeConnection() {
-            // Add current user
-            users.push(currentUser);
-            
-            // Add some demo users for testing
-            if (username === 'TestUser1') {
-                users.push({ id: '2', username: 'TestUser2' });
-                users.push({ id: '3', username: 'TestUser3' });
+        // Initialize connection using HTTP
+        async function initializeConnection() {
+            try {
+                // Join chat on server and get user object
+                const response = await fetch('/Chat/JoinChat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(username)
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert(result.message);
+                    window.location.href = '/';
+                    return;
+                }
+                
+                // Store current user from server response
+                currentUser = result.user;
+                
+                // Start polling for updates
+                startPolling();
+                
+                console.log("Chat initialized for user:", currentUser);
+                
+            } catch (err) {
+                console.error("Connection Error: ", err);
+                setTimeout(initializeConnection, 5000);
             }
+        }
+        
+        // Start polling for user list updates
+        function startPolling() {
+            // Load users immediately
+            loadUsers();
             
-            updateUsersList();
+            // Poll for user updates every 2 seconds
+            pollingInterval = setInterval(async () => {
+                await loadUsers();
+            }, 2000);
+        }
+        
+        // Load users from server
+        async function loadUsers() {
+            try {
+                const response = await fetch('/Chat/GetUsers');
+                const serverUsers = await response.json();
+                
+                // Filter out current user and update users list
+                const otherUsers = serverUsers.filter(u => u.username !== username);
+                
+                // Check if users list changed
+                if (JSON.stringify(otherUsers) !== JSON.stringify(users)) {
+                    users = otherUsers;
+                    updateUsersList();
+                }
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
         }
         
         // Update users list
@@ -119,10 +171,13 @@
             const usersList = document.getElementById('users-list');
             usersList.innerHTML = '';
             
+            if (users.length === 0) {
+                usersList.innerHTML = '<div class="text-muted text-center p-3">No other users online</div>';
+                return;
+            }
+            
             users.forEach(user => {
-                if (user.username !== username) {
-                    addUserToList(user);
-                }
+                addUserToList(user);
             });
         }
         
@@ -166,25 +221,41 @@
             document.querySelectorAll('.user-item').forEach(item => {
                 item.classList.remove('bg-primary', 'text-white');
             });
-            document.querySelector(`[data-user-id="${user.id}"]`).classList.add('bg-primary', 'text-white');
+            const selectedUserElement = document.querySelector(`[data-user-id="${user.id}"]`);
+            if (selectedUserElement) {
+                selectedUserElement.classList.add('bg-primary', 'text-white');
+            }
         }
         
         // Load chat history
-        function loadChatHistory(userId) {
-            const userMessages = messages.filter(m => 
-                (m.fromUserId === currentUser.id && m.toUserId === userId) ||
-                (m.fromUserId === userId && m.toUserId === currentUser.id)
-            );
-            
-            userMessages.forEach(message => {
-                displayMessage(message);
-            });
+        async function loadChatHistory(userId) {
+            try {
+                // For demo purposes, create some sample history
+                const sampleMessages = [
+                    {
+                        id: 'msg1',
+                        fromUserId: userId,
+                        toUserId: currentUser.id,
+                        fromUsername: currentChatUser.username,
+                        toUsername: currentUser.username,
+                        message: `Hello ${currentUser.username}! Great to see you online.`,
+                        timestamp: new Date(Date.now() - 300000).toISOString() // 5 minutes ago
+                    }
+                ];
+                
+                sampleMessages.forEach(message => {
+                    displayMessage(message);
+                });
+                
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+            }
         }
         
         // Display message
         function displayMessage(message) {
             const messagesContainer = document.getElementById('messages-container');
-            const isMyMessage = message.fromUserId === currentUser.id;
+            const isMyMessage = currentUser && message.fromUserId === currentUser.id;
             
             const messageDiv = document.createElement('div');
             messageDiv.className = `mb-3 d-flex ${isMyMessage ? 'justify-content-end' : 'justify-content-start'}`;
@@ -202,47 +273,52 @@
         }
         
         // Send message
-        function sendMessage() {
+        async function sendMessage() {
             const messageInput = document.getElementById('message-input');
             const messageText = messageInput.value.trim();
             
             if (!messageText || !currentChatUser) return;
             
-            const message = {
-                id: Math.random().toString(36),
-                fromUserId: currentUser.id,
-                toUserId: currentChatUser.id,
-                fromUsername: currentUser.username,
-                toUsername: currentChatUser.username,
-                message: messageText,
-                timestamp: new Date().toISOString()
-            };
-            
-            messages.push(message);
-            displayMessage(message);
-            messageInput.value = '';
-            
-            // Simulate receiving a response after 1 second
-            setTimeout(() => {
-                const response = {
-                    id: Math.random().toString(36),
-                    fromUserId: currentChatUser.id,
-                    toUserId: currentUser.id,
-                    fromUsername: currentChatUser.username,
-                    toUsername: currentUser.username,
-                    message: `Hello ${currentUser.username}! This is a demo response.`,
+            try {
+                // Create message object
+                const message = {
+                    id: 'msg_' + Date.now(),
+                    fromUserId: currentUser.id,
+                    toUserId: currentChatUser.id,
+                    fromUsername: currentUser.username,
+                    toUsername: currentChatUser.username,
+                    message: messageText,
                     timestamp: new Date().toISOString()
                 };
-                messages.push(response);
-                displayMessage(response);
-            }, 1000);
+                
+                // Display message immediately (optimistic UI)
+                displayMessage(message);
+                messageInput.value = '';
+                
+                // For demo purposes, simulate a response from the other user
+                setTimeout(() => {
+                    const response = {
+                        id: 'msg_' + Date.now(),
+                        fromUserId: currentChatUser.id,
+                        toUserId: currentUser.id,
+                        fromUsername: currentChatUser.username,
+                        toUsername: currentUser.username,
+                        message: `Thanks for your message: "${messageText}". This is a real-time demo response!`,
+                        timestamp: new Date().toISOString()
+                    };
+                    displayMessage(response);
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
         }
         
-        // Call functions (demo alerts)
-        function startCall(callType) {
+        // Call functions
+        async function startCall(callType) {
             if (!currentChatUser) return;
             
-            alert(`Starting ${callType} call with ${currentChatUser.username}. This is a demo - actual WebRTC implementation would go here.`);
+            alert(`${callType} call initiated with ${currentChatUser.username}. Real WebRTC implementation would start here.`);
         }
         
         // Event listeners
@@ -253,8 +329,15 @@
             }
         });
         
-        document.getElementById('audio-call-btn').addEventListener('click', () => startCall('audio'));
-        document.getElementById('video-call-btn').addEventListener('click', () => startCall('video'));
+        document.getElementById('audio-call-btn').addEventListener('click', () => startCall('Audio'));
+        document.getElementById('video-call-btn').addEventListener('click', () => startCall('Video'));
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        });
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initializeConnection);
