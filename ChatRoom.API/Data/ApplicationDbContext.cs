@@ -22,7 +22,7 @@ namespace ChatRoom.API.Data
             {
                 entity.Property(e => e.FirstName).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.LastName).HasMaxLength(100).IsRequired();
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
             });
 
             // Configure UserTask
@@ -31,7 +31,7 @@ namespace ChatRoom.API.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
                 entity.Property(e => e.Description).HasMaxLength(1000);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.Priority).HasConversion<int>();
 
                 entity.HasOne(e => e.User)
@@ -45,7 +45,7 @@ namespace ChatRoom.API.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Token).IsRequired();
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
 
                 entity.HasOne(e => e.User)
                       .WithMany(u => u.RefreshTokens)
