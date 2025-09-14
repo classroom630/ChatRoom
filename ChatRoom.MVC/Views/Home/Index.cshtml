@@ -3,6 +3,94 @@
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <h1 class="display-4">Welcome to ChatRoom Task Management</h1>
+    <p class="lead">A comprehensive task management system with role-based access control</p>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-tasks fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Task Management</h5>
+                <p class="card-text">Create, manage, and track your tasks efficiently with priority levels and completion status.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Team Collaboration</h5>
+                <p class="card-text">Work together with your team members. Managers can oversee team tasks and progress.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-shield-alt fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Role-based Access</h5>
+                <p class="card-text">Secure access control with Admin, Manager, and User roles for different permission levels.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <h3>Get Started</h3>
+        <p class="mb-4">Join our task management platform and boost your productivity!</p>
+        <a class="btn btn-primary btn-lg me-3" asp-controller="Account" asp-action="Register">
+            <i class="fas fa-user-plus me-2"></i>Register Now
+        </a>
+        <a class="btn btn-outline-primary btn-lg" asp-controller="Account" asp-action="Login">
+            <i class="fas fa-sign-in-alt me-2"></i>Login
+        </a>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <h4>Demo Accounts</h4>
+        <p>You can use these demo accounts to explore the system:</p>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <strong>Admin Account</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Email:</strong> admin@chatroom.com</p>
+                        <p><strong>Password:</strong> Admin123!</p>
+                        <small class="text-muted">Full system access, user management</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <strong>Manager Account</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Email:</strong> manager@chatroom.com</p>
+                        <p><strong>Password:</strong> Manager123!</p>
+                        <small class="text-muted">Team task management</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <strong>User Account</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Email:</strong> user@chatroom.com</p>
+                        <p><strong>Password:</strong> User123!</p>
+                        <small class="text-muted">Personal task management</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

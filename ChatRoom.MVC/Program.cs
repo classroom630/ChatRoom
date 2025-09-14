@@ -1,7 +1,27 @@
+using ChatRoom.MVC.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Configure HTTP client for API calls
+builder.Services.AddHttpClient("ChatRoomAPI", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5151");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// Register API service
+builder.Services.AddScoped<IApiService, ApiService>();
+
+// Configure session
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 var app = builder.Build();
 
@@ -17,7 +37,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseSession();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

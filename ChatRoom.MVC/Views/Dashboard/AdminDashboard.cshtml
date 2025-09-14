@@ -1,0 +1,209 @@
+@model ChatRoom.Models.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-crown me-2 text-warning"></i>Admin Dashboard</h2>
+    <span class="badge bg-danger fs-6">@Model.CurrentUser.Roles.FirstOrDefault()</span>
+</div>
+
+<!-- Admin Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>@Model.Stats.TotalUsers</h4>
+                        <p class="mb-0">Total Users</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>@Model.Stats.TotalTasks</h4>
+                        <p class="mb-0">Total Tasks</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tasks fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>@Model.Stats.CompletedTasks</h4>
+                        <p class="mb-0">Completed</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>@Model.Stats.PendingTasks</h4>
+                        <p class="mb-0">Pending</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="@Url.Action("Create", "Users")" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>Add New User
+                    </a>
+                    <a href="@Url.Action("Index", "Users")" class="btn btn-outline-primary">
+                        <i class="fas fa-users me-2"></i>Manage Users
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Users -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Recent Users</h5>
+                <a href="@Url.Action("Index", "Users")" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                @if (Model.Users.Any())
+                {
+                    @foreach (var user in Model.Users.OrderByDescending(u => u.CreatedAt).Take(5))
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong>@user.FirstName @user.LastName</strong>
+                                <br><small class="text-muted">@user.Email</small>
+                            </div>
+                            <div>
+                                <span class="badge bg-secondary">@user.Roles.FirstOrDefault()</span>
+                            </div>
+                        </div>
+                        @if (!Model.Users.OrderByDescending(u => u.CreatedAt).Take(5).Last().Equals(user))
+                        {
+                            <hr class="my-2">
+                        }
+                    }
+                }
+                else
+                {
+                    <p class="text-muted mb-0">No users found</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tasks -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>All Tasks Overview</h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Tasks.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Assigned To</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var task in Model.Tasks.OrderByDescending(t => t.CreatedAt).Take(10))
+                        {
+                            <tr class="@(task.IsCompleted ? "table-success" : "")">
+                                <td>
+                                    <strong>@task.Title</strong>
+                                    @if (!string.IsNullOrEmpty(task.Description))
+                                    {
+                                        <br><small class="text-muted">@task.Description</small>
+                                    }
+                                </td>
+                                <td>@task.UserName</td>
+                                <td>
+                                    @switch (task.Priority)
+                                    {
+                                        case ChatRoom.Models.Entities.TaskPriority.Urgent:
+                                            <span class="badge bg-danger">Urgent</span>
+                                            break;
+                                        case ChatRoom.Models.Entities.TaskPriority.High:
+                                            <span class="badge bg-warning">High</span>
+                                            break;
+                                        case ChatRoom.Models.Entities.TaskPriority.Medium:
+                                            <span class="badge bg-info">Medium</span>
+                                            break;
+                                        case ChatRoom.Models.Entities.TaskPriority.Low:
+                                            <span class="badge bg-secondary">Low</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (task.IsCompleted)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Completed
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    }
+                                </td>
+                                <td>@task.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No tasks found</h5>
+                <p class="text-muted">Tasks will appear here once users start creating them.</p>
+            </div>
+        }
+    </div>
+</div>

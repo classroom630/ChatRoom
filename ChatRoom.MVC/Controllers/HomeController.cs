@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using ChatRoom.Models;
+using ChatRoom.Models.ViewModels;
+using ChatRoom.MVC.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ChatRoom.Controllers
+namespace ChatRoom.MVC.Controllers
 {
     public class HomeController : Controller
     {
@@ -15,6 +17,14 @@ namespace ChatRoom.Controllers
 
         public IActionResult Index()
         {
+            // Check if user is logged in
+            var token = HttpContext.Session.GetString("AccessToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                // Redirect to dashboard if already logged in
+                return RedirectToAction("Index", "Dashboard");
+            }
+
             return View();
         }
 
